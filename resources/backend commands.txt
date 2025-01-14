@@ -1,0 +1,201 @@
+
+
+1. Create and activate a virtual environment
+python -m venv venv
+./venv/scripts/activate
+
+2. Packages installation
+pip install django graphene-django django-cors-headers
+
+
+3. Create a project and app
+django-admin startproject myproject
+cd myproject
+django-admin startapp myapp
+
+4. Add graphql, cors and created application and configure CORS on middleware
+INSTALLED_APPS = [
+    "graphene_django",
+    "corsheaders",
+    "myapp",
+]
+
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+]
+
+
+5. Configure CORS and CSRF
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+
+CORS_ORIGIN_WHITELIST = (
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+)
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'contenttype',
+]
+
+6. Create a model and run migration
+class Item(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8081
+
+
+7. GRAPHL SCHEMA
+GRAPHENE = {
+    'SCHEMA': 'myapp.schema.schema',
+}
+
+from graphene_django.views import GraphQLView
+from django.views.decorators.csrf import csrf_exempt
+
+
+urlpatterns = [
+ 
+    path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
+]
+
+
+
+import graphene
+from graphene_django.types import DjangoObjectType
+from .models import Item
+
+class ItemType(DjangoObjectType):
+    class Meta:
+        model = Item
+
+class Query(graphene.ObjectType):
+    items = graphene.List(ItemType)
+
+    def resolve_items(self, info, **kwargs):
+        return Item.objects.all()
+
+class CreateItem(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        description = graphene.String()
+        price = graphene.Decimal()
+
+    item = graphene.Field(ItemType)
+
+    def mutate(self, info, name, description, price):
+        item = Item(name=name, description=description, price=price)
+        item.save()
+        return CreateItem(item=item)
+
+class UpdateItem(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        name = graphene.String()
+        description = graphene.String()
+        price = graphene.Decimal()
+
+    item = graphene.Field(ItemType)
+
+    def mutate(self, info, id, name=None, description=None, price=None):
+        try:
+            item = Item.objects.get(pk=id)
+        except Item.DoesNotExist:
+            raise Exception("Item not found")
+
+        if name is not None:
+            item.name = name
+        if description is not None:
+            item.description = description
+        if price is not None:
+            item.price = price
+
+        item.save()
+        return UpdateItem(item=item)
+
+
+# Add DeleteItem Mutation
+class DeleteItem(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)  # ID of the item to delete
+
+    success = graphene.Boolean()  # Return a boolean indicating success
+
+    def mutate(self, info, id):
+        try:
+            item = Item.objects.get(pk=id)
+            item.delete()
+            return DeleteItem(success=True)
+        except Item.DoesNotExist:
+            raise Exception("Item not found")
+        except Exception as e:
+            raise Exception(f"An error occurred: {str(e)}")
+
+class Mutation(graphene.ObjectType):
+    create_item = CreateItem.Field()
+    update_item = UpdateItem.Field()
+    delete_item = DeleteItem.Field()  # Register the delete mutation
+
+schema = graphene.Schema(query=Query, mutation=Mutation)
+
+
+
+TEST the GraphQL
+SELECT
+query {
+    items {
+      id
+      name
+      description
+    }
+  }
+
+
+
+CREATE
+mutation {
+  createItem(name: "HP", description: "Laptop", price: "240.00") {
+    item {
+      id
+      name
+      description
+    }
+  }
+}
+
+
+
+UPDATE
+mutation {
+  updateItem(id: 3, name: "Updated Item Name", price: "19.99") {
+    item {
+      id
+      name
+      description
+      price
+    }
+  }
+}
+
+
+
+DELETE
+mutation {
+  deleteItem(id: "3") {
+    success
+  }
+}
+

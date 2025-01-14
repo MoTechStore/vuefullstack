@@ -1,0 +1,192 @@
+<template>
+    
+    
+    <div class="container-fluid">
+      <h2 class="alert alert-danger mt-2">Django 5, GraphQL, Vue JS 3, and Pinia CRUD Application</h2>
+  
+      <div class="row">
+  
+          <!-- Left Column -->
+          <div class="col-sm-7">
+              <h2 class="alert alert-success">List of Items In Shop</h2>
+  
+              <table class="table table-bordered mt-4">
+                  <thead>
+                      <tr>
+                          <th scope="col">Index</th>
+                          <th scope="col">Name</th>
+                          <th scope="col">Description</th>
+                          <th scope="col">Price</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      <tr v-for="(item, index) in itemStore.items" :key="item.id">
+                          <td>{{ index + 1 }}</td>
+                          <td>{{ item.name }}</td>
+                          <td>{{ item.description}}</td>
+                          <td>${{ item.price}} </td>
+                          <td>
+                              <a href="#" class="edit" title="">
+                                  <button class="btn btn-warning btn-sm" @click="editBtn(item.id)">Edit</button>
+                              </a>
+                              <a href="#" class="edit ms-2" title="">
+                                  <button class="btn btn-danger btn-sm" @click="deleteBtn(item.id)">Delete</button>
+                              </a>
+                          </td>
+                      </tr>
+                  </tbody>
+              </table>
+          </div>
+  
+          <!-- Right Column -->
+          <div class="col-md-5">
+              <div  v-if=currentItem>
+                  <h2 class="alert alert-warning">Edit Item Details</h2>
+  
+                  <form @submit.prevent="updateItem()">
+  
+                      <div class="row">
+                          <div class="col">
+                              <div class="form-group">
+                                  <label class="form-label float-left ml-2">Name</label>
+                                  <input type="text" class="form-control" v-model="currentItem.name">
+                              </div>
+                          </div>
+  
+                          <div class="col">
+                              <div class="form-group">
+                                  <label class="form-label float-left ml-2">Description</label>
+                                  <input type="text" class="form-control" v-model="currentItem.description">
+                              </div>
+                          </div>
+                      </div>
+  
+                      <div class="row">
+                          <div class="col">
+                              <div class="form-group">
+                                  <label class="form-label float-left ml-2">Price</label>
+                                  <input type="text" class="form-control" v-model="currentItem.price">
+                              </div>
+                          </div>
+                      </div>
+  
+                      <button type="submit" class="btn btn-success float-left mt-2">Update</button>
+                  </form>
+              </div>
+  
+              <!-- Form for Creating New Item -->
+              <div v-else>
+                  <h2 class="alert alert-info">Create A New Item</h2>
+  
+                  <form @submit.prevent="addItem()">
+                      <div class="row">
+                          <div class="col">
+                              <div class="form-group">
+                                  <label class="form-label float-left ml-2">Name</label>
+                                  <input type="text" class="form-control" v-model="name">
+                              </div>
+                          </div>
+  
+                          <div class="col">
+                              <div class="form-group">
+                                  <label class="form-label float-left ml-2">Description</label>
+                                  <input type="text" class="form-control" v-model="description">
+                              </div>
+                          </div>
+                      </div>
+  
+                      <div class="row">
+                          <div class="col">
+                              <div class="form-group">
+                                  <label class="form-label float-left ml-2">Price</label>
+                                  <input type="number" class="form-control" v-model="price">
+                              </div>
+                          </div>
+                      </div>
+  
+                      <button type="submit" class="btn btn-primary float-left mt-2">Save</button>
+                  </form>
+              </div>
+          </div>
+      </div>
+  </div>
+
+
+</template>
+
+<script>
+import {ref, onMounted} from 'vue';
+import { useItemStore } from '@/stores/itemStore';
+
+
+export default {
+    setup(){
+        const name = ref('');
+        const description = ref('');
+        const price = ref(0);
+        const currentItem = ref(null);
+
+        const itemStore = useItemStore();
+
+        onMounted(() =>{
+            itemStore.fetchItems();
+        });
+
+
+        const addItem = async () =>{
+         try {
+            await itemStore.createItem(name.value, description.value, price.value);
+            name.value = '';
+            description.value = '';
+            price.value = '';
+         } catch (error) {
+            console.log(error);
+            
+         }
+        };
+
+        const editBtn = ((id) =>{
+            const itemToEdit = itemStore.items.find((item) => item.id === id);
+            if(itemToEdit){
+                currentItem.value = {...itemToEdit}
+            }
+        });
+
+
+        const updateItem = async () =>{
+            try {
+                if(!currentItem.value.id){
+                    alert("No item selected for update");
+                }
+
+                await itemStore.updateItem(
+                    currentItem.value.id,
+                    currentItem.value.name,
+                    currentItem.value.description,
+                    currentItem.value.price
+                );
+
+                currentItem.value = null;
+                name.value = '';
+                description.value = '';
+                price.value = '';
+            } catch (error) {
+               console.log(error) 
+            }
+        };
+
+
+        const deleteBtn = async (id) =>{
+            try {
+                await itemStore.deleteItem(id);
+                alert('Item Deleted Successfully');
+            } catch (error) {
+                alert('Failed To Delete An Item');
+            }
+        };
+
+        return {itemStore, name, price, description, currentItem, addItem, editBtn, updateItem, deleteBtn}
+    }
+}
+
+</script>

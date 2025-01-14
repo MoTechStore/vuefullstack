@@ -1,0 +1,52 @@
+
+1. create a project and install packages
+npm init vue@latest vue-crud
+cd vue-crud
+
+npm install @vue/apollo-composable graphql pinia
+npm install @vue/apollo-composable graphql-tag
+npm install @apollo/client
+npm install bootstrap@5.3.3
+npm run dev
+
+
+
+2. Configure main.js and setup Pinia
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
+
+import { createApp, h, provide } from 'vue'
+import { createPinia } from 'pinia'
+
+
+import { ApolloClient, InMemoryCache } from '@apollo/client/core';
+import { DefaultApolloClient, provideApolloClient } from '@vue/apollo-composable';
+
+export const apolloClient = new ApolloClient({
+  uri: 'http://localhost:8081/graphql/', 
+  cache: new InMemoryCache(),
+});
+
+
+const app = createApp({
+    setup(){
+        provide(DefaultApolloClient, apolloClient)
+    },
+    render: () => h(App)
+})
+
+app.use(createPinia())
+app.use(router)
+
+app.mount('#app')
+
+
+3. Imports of item store
+
+
+import { defineStore } from 'pinia';
+import { useQuery } from '@vue/apollo-composable';
+import gql from 'graphql-tag';
+import { watch } from 'vue';
+import { apolloClient } from '@/main';

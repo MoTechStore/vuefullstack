@@ -1,0 +1,42 @@
+CREATE
+
+const CREATE_ITEM = gql`
+          mutation($name: String!, $description: String, $price: Decimal!) {
+            createItem(name: $name, description: $description, price: $price) {
+              item {
+                id
+                name
+                description
+                price
+              }
+            }
+          }
+
+
+UPDATE
+
+const UPDATE_ITEM = gql`
+            mutation($id: ID!, $name: String, $description: String, $price: Decimal) {
+                updateItem(id: $id, name: $name, description: $description, price: $price) {
+                    item {
+                        id
+                        name
+                        description
+                        price
+                    }
+                }
+            }
+        `
+        `
+
+DELETE
+
+const DELETE_ITEM = gql`
+            mutation($id: ID!) {
+                deleteItem(id: $id) {
+                    success
+                }
+            }
+        `
+
+
